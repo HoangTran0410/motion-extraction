@@ -10,11 +10,11 @@
         html {
             background-color: black;
             height: 100vh;
+            color: white;
         }
 
         body {
             margin: 0;
-            height: 100%;
         }
 
         #video {
@@ -23,11 +23,13 @@
 
         .canvasContainer {
             position: relative;
-            display: inline-block;
+            height: fit-content;
         }
 
-        canvas {
+        canvas:nth-child(2) {
             position: absolute;
+            top: 0;
+            left: 0;
         }
     </style>
 </head>
@@ -38,6 +40,11 @@
     <div class="canvasContainer">
         <canvas id="canvas"></canvas>
         <canvas id="canvasFinal"></canvas>
+    </div>
+
+    <div class="controller">
+        <label for="frameShift">FrameShift</label>
+        <input type="range" name="frameShift" id="frameShift" max="120" min="1" value="60" step="1">
     </div>
 
     <script>
@@ -58,6 +65,16 @@
         let imgData = null;
         let imgDataPrev = [];
 
+        snapShot();
+        setupControl();
+
+        function setupControl() {
+            let frameShiftSlider = document.getElementById("frameShift");
+            frameShiftSlider.oninput = function () {
+                frameShift = frameShiftSlider.value;
+            };
+        }
+
         function snapShot() {
             canvas.width = canvasFinal.width = video.offsetWidth;
             canvas.height = canvasFinal.height = video.offsetHeight;
@@ -76,6 +93,7 @@
             let preData = imgDataPrev[imgDataPrev.length - 1];
             if (imgDataPrev.length > frameShift) {
                 preData = imgDataPrev.shift();
+                imgDataPrev.length = frameShift;
             }
 
             imgData = ctx.getImageData(0, 0, w, h);
@@ -128,8 +146,6 @@
             data[index + 2] = 255 - data[index + 2];
             data[index + 3] = 255;
         }
-
-        snapShot();
     </script>
 </body>
 
