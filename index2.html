@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+        html {
+            background-color: black;
+            height: 100vh;
+        }
+
+        body {
+            margin: 0;
+            height: 100%;
+        }
+
+        #video {
+            display: inline-block;
+        }
+
+        .canvasContainer {
+            position: relative;
+            display: inline-block;
+        }
+
+        canvas {
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+    <video id="video" src="video.mp4" width="640" controls autoplay loop muted></video>
+
+    <div class="canvasContainer">
+        <canvas id="canvas"></canvas>
+        <canvas id="canvasFinal"></canvas>
+    </div>
+
+    <script>
+        let alpha = 0.5;
+        let greyScale = false;
+        let frameShift = 60;
+
+        let canvas = document.getElementById("canvas");
+        let canvasFinal = document.getElementById("canvasFinal");
+        let video = document.getElementById("video");
+        let ctx = canvas.getContext("2d", {
+            willReadFrequently: true
+        });
+        let ctxFinal = canvasFinal.getContext("2d", {
+            willReadFrequently: true
+        });
+
+        let imgData = null;
+        let imgDataPrev = [];
+
+        function snapShot() {
+            canvas.width = canvasFinal.width = video.offsetWidth;
+            canvas.height = canvasFinal.height = video.offsetHeight;
+
+            let {
+                width: w,
+                height: h
+            } = canvas;
+
+            ctx.drawImage(video, 0, 0, w, h);
+
+            // Must capture image data in new instance as it is a live reference.
+            // Use alternative live referneces to prevent messed up data.
+            imgDataPrev.push(ctx.getImageData(0, 0, w, h));
+
+            let preData = imgDataPrev[imgDataPrev.length - 1];
+            if (imgDataPrev.length > frameShift) {
+                preData = imgDataPrev.shift();
+            }
+
+            imgData = ctx.getImageData(0, 0, w, h);
+
+            let length = imgData.data.length;
+            let x = 0;
+            while (x < length) {
+                if (!greyScale) {
+                    // Alpha blending formula: out = (alpha * new) + (1 - alpha) * old.
+                    alphaBending(imgData.data, preData.data, x);
+                } else {
+                    // GreyScale.
+                    let av =
+                        (imgData.data[x] + imgData.data[x + 1] + imgData.data[x + 2]) / 3;
+                    let av2 =
+                        (preData.data[x] + preData.data[x + 1] + preData.data[x + 2]) / 3;
+                    let blended = alpha * (255 - av) + (1 - alpha) * av2;
+                    imgData.data[x] = blended;
+                    imgData.data[x + 1] = blended;
+                    imgData.data[x + 2] = blended;
+                    imgData.data[x + 3] = 255;
+                }
+                x += 4;
+            }
+            ctxFinal.putImageData(imgData, 0, 0, 0, 0, w, h);
+
+            requestAnimationFrame(snapShot);
+        }
+
+        function alphaBending(data, predata, index) {
+            for (let j = 0; j < 3; j++) {
+                data[index + j] =
+                    alpha * (255 - data[index + j]) +
+                    (1 - alpha) * predata[index + j];
+            }
+            data[index + 3] = 255;
+        }
+
+        function grayScale(data, index) {
+            let av = (data[index] + data[index + 1] + data[index + 2]) / 3;
+            data[index] = av;
+            data[index + 1] = av;
+            data[index + 2] = av;
+            data[index + 3] = 255;
+        }
+
+        function invert(data, index) {
+            data[index] = 255 - data[index];
+            data[index + 1] = 255 - data[index + 1];
+            data[index + 2] = 255 - data[index + 2];
+            data[index + 3] = 255;
+        }
+
+        snapShot();
+    </script>
+</body>
+
+</html>
